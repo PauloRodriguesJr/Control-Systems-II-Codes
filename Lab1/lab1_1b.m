@@ -8,15 +8,7 @@ clc;
 % Sistema sem compensacao
 np=10;
 dp=conv([1 0 0],[1 10]);
-Gnc = tf(np,dp,'InputDelay',0.05)
-
-nc = 16*[1 0.7];
-dc = [1 9];
-
-Gc = tf(nc, dc);
-
-Gcomp = series(Gnc, Gc);
-%PHI=atan2(imag(nc),real(dc))
+Gnc = tf(np,dp,'InputDelay',0.05);
 
 % Plot das margens do sist. original  (Bode)
 figure(1)
@@ -28,13 +20,13 @@ grid;
 
 % Resposta ao degrau do sist. original
 subplot(122);
-step(feedback(Gcomp,1));
+step(Gnc);
 h = findobj(gcf,'type','line');
 set(h,'linewidth',2);
 grid;
 
-% Calcula sobresinal em porcentagem e tempo de acomodacao (Add ao título)
-S1 = stepinfo(feedback(Gcomp,1),'RiseTimeLimits',[0.02,0.98]);
+% Calcula sobresinal em porcentagem e tempo de acomodacao
+S1 = stepinfo(Gnc,'RiseTimeLimits',[0.02,0.98]);
 Mp1=S1.Overshoot;
 ts1=S1.SettlingTime;
 title(['Mp=', num2str(Mp1), '   ts=', num2str(ts1)]);
@@ -44,10 +36,8 @@ set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25])
 %% Sistema com ganho ajustado mas nao compensado 
 % Compensar sobressinal na ressonância
 
-%K=40 % primeira tentativa
-%K=30 % 
-%K=16;% gabarito
-K=0.78;
+%K=0.78;
+K=1;
 np= 10*K;
 dp=conv([1 0 0],[1 10]);
 Gnk = tf(np,dp,'InputDelay',0.05);
@@ -63,7 +53,7 @@ grid;
 
 
 % Resposta ao degrau do sistema com ganho ajustado mas nao compensado
-ma_sc=Gnk; % FT de MA com ganho ajustado
+ma_sc=Gnk; % FT de MA com ganho ajustado 
 [Gm,Pm,Wg,Wp] = margin(ma_sc); % Calculo da MFase e MG
 
 % Fecha malha
@@ -74,9 +64,8 @@ step(mf_sc);
 h = findobj(gcf,'type','line');
 set(h,'linewidth',2);
 grid;
-%nichols(Gnk);
 
-% Calcula sobresinal em percentagem e tempo de acomodaï¿½ï¿½o
+% Calcula sobresinal em percentagem e tempo de acomodacao
 S2 = stepinfo(mf_sc,'RiseTimeLimits',[0.02,0.98]);
 Mp_2=S2.Overshoot;
 MpdB=20*log10(Mp_2);
@@ -89,6 +78,7 @@ title(['Mp(dB) =', num2str(MpdB), '   ts=', num2str(ts2)]);
 % set(findall(gcf,'type','line'),'linewidth',2)
 % set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25])
 % grid;
+
 % Carta de Nichols para o sistema ajustado, mas não compensado 
 figure(11);
 P = nicholsoptions; 
@@ -97,7 +87,6 @@ P.YLim = [-40 40];
 P.legend
 hold on;
 nicholsplot(Gnc*K,P);
-%nicholsplot(sys_ma_ct,P);
 set(findall(gcf,'Type','text'),'FontSize',14)
 set(findall(gcf,'type','line'),'linewidth',2)
 hold on;
@@ -111,14 +100,14 @@ Mr_max = 10^(3.5/20);
 wr = 1.4;
 %csi_d = 1/(2*Mr_max);
 csis = roots([-1 0 1 0 -1/(2*Mr_max)^2]);
-csi_d = csis(4,1)
+csi_d = csis(4,1);
 MF_d= atan2(2*csi_d, sqrt(sqrt(1+4*csi_d^4)-2*csi_d^2))*180/pi;
 
-%Mp = exp(pi*(-csi_d/sqrt(1-csi_d^2))); %% resultado em porcentagem
-
-%%
-tole = -18%30;
-MF = -45.3;  %-24; % Para ganho unitário
+% Calcula Maximo sobressinal em porcentagem
+%Mp = exp(pi*(-csi_d/sqrt(1-csi_d^2))); 
+%% Obtenção de parâmetros do controlador (Pt1)
+tole = 13;%-18%30;
+MF = -8.55; %45.3;  %-24; % Para ganho unitário
 MF_d;
 
 phi_m=(MF_d-MF+tole); % Maximo angulo de avanco
@@ -141,17 +130,12 @@ set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25])
 grid;
 
 %% Frequencia de interesse
-wm = 6.45% gabarito: 
-%wm = 8.38;
-wm = 1.33; % primeiro certo e segundo também
-wm = 1.44; % para 15 graus
-wm = 3.3; % para K=4;
-wm = 1.37 % tolerância -15
 
-wm =4.31; %
+wm = 2.15; % para o projeto com -18 - 45.5
+wm = 1.62;
+wm = 1.83;
+wm = 1.92;
 wm = 1.94;
-wm = 1.6;
-wm = 1.82;
 
 % Calculo do T
 T=1/(wm*sqrt(alpha));
@@ -160,31 +144,29 @@ T=1/(wm*sqrt(alpha));
 nc=[T 1];
 dc=[alpha*T 1];
 
-%sys_p=tf(n1,d1); % FT de MA do sistema com ganho ajustado
-G_c = tf(nc,dc) % FT do compensador
+G_c = tf(nc,dc); % FT do compensador
 
 sys_ma_ct=tf(series(Gnk,G_c));%series(G_c,)); % FT de MA do sistema compensado
 
-%Teste de gabarito
-%G_gabarito = tf(16*[1 0.7],[1 9]);
-%sys_ma_ct=tf(series(G_gabarito,G_c));
-
+% % Diagrama de Bode da FT de MA do sistema compensado
 figure(5)
-margin(sys_ma_ct); % Diagrama de Bode da FT de MA do sistema compensado
+margin(sys_ma_ct); 
 set(findall(gcf,'Type','text'),'FontSize',14)
 set(findall(gcf,'type','line'),'linewidth',2)
 set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25])
 grid;
 
-sys_mf_ct=feedback(sys_ma_ct,1); % FT de MF do sistema compensado
 %%
+sys_mf_ct=feedback(sys_ma_ct,1); % FT de MF do sistema compensado
 figure(6)
 margin(sys_mf_ct); % Diagrama de Bode da FT de MA do sistema compensado
-set(findall(gcf,'Type','text'),'FontSize',14)
-set(findall(gcf,'type','line'),'linewidth',2)
-set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25])
+set(findall(gcf,'Type','text'),'FontSize',14);
+set(findall(gcf,'type','line'),'linewidth',2);
+set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25]);
 grid;
-
+%title('Diagrama de Bode em Malha Aberta do Sistema Compensado');
+% Diagrama de Bode da FT de MA do sistema compensado
+save_fig_pdf('1b_bode_compensado_ma',gcf,gca);
 
 %% Parametros temporais da do sistema compensado 
 %% Resposta ao degrau unitario
@@ -210,7 +192,8 @@ Mp3= S3.Overshoot;
 %Mp3db = 20*log10(Mp3);
 ts3=S3.SettlingTime;
 title(['Resposta ao degrau :   ' , 'M_p=   ',num2str(Mp3),' %','    t_s=  ',num2str(ts3),' s']);
-%save_fig_pdf('1b_resposta_degrau',gcf,gca)
+save_fig_pdf('1b_resposta_degrau',gcf,gca)
+
 
 %% Gráfico comparativo Cartas de Nichols (resultado final)
 figure(11);
@@ -238,20 +221,20 @@ bode(sys_mf_ct);
 set(findall(gcf,'Type','text'),'FontSize',14)
 set(findall(gcf,'type','line'),'linewidth',2)
 set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25])
+hold on
+legend('Sem controle','Com controle');
+title('Comparação do Diagrama de Bode: Sistema Original x Sistema Compensado em Malha Fechada')
+
 grid;   
 hold off;
-legend('Sem controle','Com controle');
 %save_fig_pdf('1b_bode_compara',gcf,gca)
-
 %% Resposta à Rampa do sistema
 figure(10);
 t=0:0.1:10;
 u=t;
 ysc=lsim(feedback(tf(np,dp),1),u,t);
-%yga=lsim(mf_sc,u,t); yga,'k', 'G.A.'
 ycc=lsim(sys_mf_ct,u,t);
 plot(t,u,'y',t,ysc,'b',t,ycc,'r');
-%ylim ([0,10]);
 h = findobj(gcf,'type','line');
 set(h,'linewidth',2);
 %set(gcf, 'Units','centimeters', 'Position',[0 1.4 35 25])
@@ -260,5 +243,5 @@ xlabel('Tempo (s)');
 legend('Rampa','Sist. original','Sist.compensado','Location','NorthWest')
 grid;
 title('Resposta à rampa para o sistema original e compensado')
-%save_fig_pdf('1b_resposta_rampa',gcf,gca)
+save_fig_pdf('1b_resposta_rampa',gcf,gca)
 close all;
