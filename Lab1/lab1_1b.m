@@ -102,7 +102,6 @@ wr = 1.4;
 csis = roots([-1 0 1 0 -1/(2*Mr_max)^2]);
 csi_d = csis(4,1);
 MF_d= atan2(2*csi_d, sqrt(sqrt(1+4*csi_d^4)-2*csi_d^2))*180/pi;
-
 % Calcula Maximo sobressinal em porcentagem
 %Mp = exp(pi*(-csi_d/sqrt(1-csi_d^2))); 
 %% Obtenção de parâmetros do controlador (Pt1)
